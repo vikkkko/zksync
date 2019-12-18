@@ -22,6 +22,9 @@ use franklin_crypto::jubjub::{FixedGenerators, JubjubEngine, JubjubParams};
 use models::circuit::account::CircuitAccount;
 use models::params as franklin_constants;
 
+extern crate tokio;
+extern crate futures;
+
 const DIFFERENT_TRANSACTIONS_TYPE_NUMBER: usize = 7;
 #[derive(Clone)]
 pub struct FranklinCircuit<'a, E: JubjubEngine> {
@@ -47,9 +50,20 @@ struct PreviousData<E: JubjubEngine> {
     op_data: AllocatedOperationData<E>,
 }
 
+use std::time::{Duration, Instant};
+static mut sum_of_barik_timer:std::time::Duration = Duration::from_secs(0);
+
 // Implementation of our circuit:
 impl<'a, E: JubjubEngine> Circuit<E> for FranklinCircuit<'a, E> {
     fn synthesize<CS: ConstraintSystem<E>>(self, cs: &mut CS) -> Result<(), SynthesisError> {
+        use std::time::{Duration, Instant};
+
+        unsafe {
+            sum_of_barik_timer = Duration::from_secs(0);
+        }
+        let pointSTART=Instant::now();
+        println!("start synthesize");
+
         // we only need this for consistency of first operation
         let zero_circuit_element = CircuitElement::from_expression_padded(
             cs.namespace(|| "zero_circuit_element"),
@@ -305,19 +319,31 @@ impl<'a, E: JubjubEngine> Circuit<E> for FranklinCircuit<'a, E> {
             pack_bits.extend(hash_block);
             pack_bits.extend(old_root.get_bits_be());
 
+            let pointlol1=Instant::now();
             hash_block = sha256::sha256(cs.namespace(|| "hash old_root"), &pack_bits)?;
+            unsafe {
+                sum_of_barik_timer += Instant::now().duration_since(pointlol1);
+            }
 
             let mut pack_bits = vec![];
             pack_bits.extend(hash_block);
             pack_bits.extend(final_root.get_bits_be());
 
+            let pointlol2=Instant::now();
             hash_block = sha256::sha256(cs.namespace(|| "hash with new_root"), &pack_bits)?;
+            unsafe {
+                sum_of_barik_timer += Instant::now().duration_since(pointlol2);
+            }
 
             let mut pack_bits = vec![];
             pack_bits.extend(hash_block);
             pack_bits.extend(block_pub_data_bits.into_iter());
 
+            let pointlol3=Instant::now();
             hash_block = sha256::sha256(cs.namespace(|| "final hash public"), &pack_bits)?;
+            unsafe {
+                sum_of_barik_timer += Instant::now().duration_since(pointlol3);
+            }
 
             // // now pack and enforce equality to the input
 
@@ -331,6 +357,388 @@ impl<'a, E: JubjubEngine> Circuit<E> for FranklinCircuit<'a, E> {
                 |lc| lc + CS::one(),
                 |lc| lc + final_hash.get_variable(),
             );
+        }
+        println!("time for circuits synthesize :: {:?}",Instant::now().duration_since(pointSTART));
+        unsafe {
+            println!("sum_of_barik_timer :: {:?}", sum_of_barik_timer);
+        }
+        Ok(())
+    }
+
+    fn barik_synthesize<CS: ConstraintSystem<E>>(&self, cs: &mut CS) -> Result<(), SynthesisError> {
+        use std::time::{Duration, Instant};
+
+        println!("kek kekov");
+
+        unsafe {
+            sum_of_barik_timer = Duration::from_secs(0);
+        }
+        let pointSTART=Instant::now();
+        println!("start synthesize");
+
+        use franklin_crypto::circuit::boolean::AllocatedBit;
+        use franklin_crypto::circuit::pedersen_hash::Personalization;
+
+//        for lens in 1..1000{
+//            if (lens==739){
+//                continue;
+//            }
+//            use std::fmt::Error;
+//            let mut do_step = || -> Result<i32,SynthesisError>{
+//                let input: Vec<bool> = (0..lens).map(|_| false).collect();
+//
+//                let input_bools: Vec<Boolean> = input.iter().enumerate().map(|(i, b)| {
+//                    Boolean::from(
+//                        AllocatedBit::alloc(cs.namespace(|| format!("input {}", i)), Some(*b)).unwrap()
+//                    )
+//                }).collect();
+//
+//                let before = cs.get_size_of_a();
+//
+//                pedersen_hash::pedersen_hash(
+//                    cs.namespace(|| "pedersen hash"),
+//                    Personalization::NoteCommitment,
+//                    &input_bools,
+//                    self.params
+//                );
+//
+//                let after = cs.get_size_of_a();
+//
+//                Ok((after-before) as i32)
+//            };
+//
+//            if let Err(_) = do_step(){
+//                println!("can't do with lens : {}",lens);
+//            }
+//            else {
+//                let res= do_step().unwrap();
+//                let mut predict=10+5*((lens-1)/3);
+//                if ((lens-1)%3==0){
+//                    predict+=1;
+//                }
+//                else{
+//                    predict+=2;
+//                }
+//                if (lens>=181){
+//                    predict+=5;
+//                }
+//                if (lens>=367){
+//                    predict+=5;
+//                }
+//                if (lens>=553){
+//                    predict+=5;
+//                }
+////                assert_eq!(res,predict);
+//                println!("barik test :: {} {}", lens, res);
+//            }
+//        }
+
+        // we only need this for consistency of first operation
+        let zero_circuit_element = CircuitElement::from_expression_padded(
+            cs.namespace(|| "zero_circuit_element"),
+            Expression::u64::<CS>(0),
+        )?;
+        let mut prev = PreviousData {
+            op_data: AllocatedOperationData {
+                ethereum_key: zero_circuit_element.clone(),
+                new_pubkey_hash: zero_circuit_element.clone(),
+                pub_nonce: zero_circuit_element.clone(),
+                amount_packed: zero_circuit_element.clone(),
+                full_amount: zero_circuit_element.clone(),
+                fee_packed: zero_circuit_element.clone(),
+                fee: zero_circuit_element.clone(),
+                amount_unpacked: zero_circuit_element.clone(),
+                first_sig_msg: zero_circuit_element.clone(),
+                second_sig_msg: zero_circuit_element.clone(),
+                third_sig_msg: zero_circuit_element.clone(),
+                a: zero_circuit_element.clone(),
+                b: zero_circuit_element.clone(),
+            },
+        };
+        // this is only public input to our circuit
+        let public_data_commitment =
+            AllocatedNum::alloc(cs.namespace(|| "public_data_commitment"), || {
+                self.pub_data_commitment.grab()
+            })?;
+        public_data_commitment.inputize(cs.namespace(|| "inputize pub_data"))?;
+
+        let validator_address_padded =
+            CircuitElement::from_fe_padded(cs.namespace(|| "validator_address"), || {
+                self.validator_address.grab()
+            })?;
+        let mut validator_address_bits = validator_address_padded.get_bits_le();
+        validator_address_bits.truncate(franklin_constants::ACCOUNT_ID_BIT_WIDTH);
+
+        let mut validator_balances = allocate_numbers_vec(
+            cs.namespace(|| "validator_balances"),
+            &self.validator_balances,
+        )?;
+        assert_eq!(
+            validator_balances.len(),
+            (1 << franklin_constants::BALANCE_TREE_DEPTH) as usize
+        );
+
+        let validator_audit_path = allocate_numbers_vec(
+            cs.namespace(|| "validator_audit_path"),
+            &self.validator_audit_path,
+        )?;
+        assert_eq!(
+            validator_audit_path.len(),
+            franklin_constants::account_tree_depth() as usize
+        );
+
+        let validator_account = AccountContent::from_witness(
+            cs.namespace(|| "validator account"),
+            &self.validator_account,
+        )?;
+        let mut rolling_root =
+            AllocatedNum::alloc(cs.namespace(|| "rolling_root"), || self.old_root.grab())?;
+
+        let old_root =
+            CircuitElement::from_number_padded(cs.namespace(|| "old_root"), rolling_root.clone())?;
+        // first chunk of block should always have number 0
+        let mut next_chunk_number = zero_circuit_element.get_number();
+
+        // declare vector of fees, that will be collected during block processing
+        let mut fees = vec![];
+        let fees_len = 1 << franklin_constants::BALANCE_TREE_DEPTH;
+        for _ in 0..fees_len {
+            fees.push(zero_circuit_element.get_number());
+        }
+        // vector of pub_data_bits that will be aggregated during block processing
+        let mut block_pub_data_bits = vec![];
+
+        let mut allocated_chunk_data: AllocatedChunkData<E> = AllocatedChunkData {
+            is_chunk_last: Boolean::constant(false),
+            is_chunk_first: Boolean::constant(false),
+            chunk_number: zero_circuit_element.get_number(),
+            tx_type: zero_circuit_element,
+        };
+
+        // Main cycle that processes operations:
+        for (i, operation) in self.operations.iter().enumerate() {
+            debug!("operation number {} processing started \n", i);
+            let cs = &mut cs.namespace(|| format!("chunk number {}", i));
+
+            let (next_chunk, chunk_data) = self.verify_correct_chunking(
+                &operation,
+                &next_chunk_number,
+                cs.namespace(|| "verify_correct_chunking"),
+            )?;
+
+            allocated_chunk_data = chunk_data;
+            next_chunk_number = next_chunk;
+            let operation_pub_data_chunk = CircuitElement::from_fe_strict(
+                cs.namespace(|| "operation_pub_data_chunk"),
+                || operation.clone().pubdata_chunk.grab(),
+                franklin_constants::CHUNK_BIT_WIDTH,
+            )?;
+            block_pub_data_bits.extend(operation_pub_data_chunk.get_bits_le());
+
+            let lhs =
+                AllocatedOperationBranch::from_witness(cs.namespace(|| "lhs"), &operation.lhs)?;
+            let rhs =
+                AllocatedOperationBranch::from_witness(cs.namespace(|| "rhs"), &operation.rhs)?;
+            let mut current_branch = self.select_branch(
+                cs.namespace(|| "select appropriate branch"),
+                &lhs,
+                &rhs,
+                operation,
+                &allocated_chunk_data,
+            )?;
+            // calculate root for given account data
+            let (state_root, is_account_empty, subtree_root) = self
+                .check_account_data(cs.namespace(|| "calculate account root"), &current_branch)?;
+
+//            let state_root_copy=AllocatedNum::alloc(cs.namespace(|| "barik lohus"), || Ok(state_root.get_value().unwrap()));
+//
+//            cs.enforce(
+//                || "root state before applying operation is valid",
+//                |lc| lc + state_root_copy.unwrap().get_variable(),
+//                |lc| lc + CS::one(),
+//                |lc| lc + state_root.get_variable(),
+//            );
+
+            // ensure root hash of state before applying operation is correct
+            cs.enforce(
+                || "root state before applying operation is valid",
+                |lc| lc + state_root.get_variable(),
+                |lc| lc + CS::one(),
+                |lc| lc + rolling_root.get_variable(),
+            );
+            self.execute_op(
+                cs.namespace(|| "execute_op"),
+                &mut current_branch,
+                &lhs,
+                &rhs,
+                &operation,
+                &allocated_chunk_data,
+                &is_account_empty,
+                &operation_pub_data_chunk.get_number(),
+                &subtree_root,
+                &mut fees,
+                &mut prev,
+            )?;
+            let (new_state_root, _, _) = self.check_account_data(
+                cs.namespace(|| "calculate new account root"),
+                &current_branch,
+            )?;
+
+            rolling_root = new_state_root;
+        }
+
+        cs.enforce(
+            || "ensure last chunk of the block is a last chunk of corresponding transaction",
+            |_| {
+                allocated_chunk_data
+                    .is_chunk_last
+                    .lc(CS::one(), E::Fr::one())
+            },
+            |lc| lc + CS::one(),
+            |lc| lc + CS::one(),
+        );
+
+        // calculate operator's balance_tree root hash from whole tree representation
+        let old_operator_balance_root = barik_calculate_root_from_full_representation_fees(
+            cs.namespace(|| "calculate_root_from_full_representation_fees before"),
+            &validator_balances,
+            self.params,
+        )?;
+
+        let mut operator_account_data = vec![];
+        let mut old_operator_balance_root_bits = old_operator_balance_root
+            .into_bits_le(cs.namespace(|| "old_operator_balance_root_bits"))?;
+        old_operator_balance_root_bits.resize(
+            franklin_constants::FR_BIT_WIDTH_PADDED,
+            Boolean::constant(false),
+        );
+        operator_account_data.extend(validator_account.nonce.get_bits_le());
+        operator_account_data.extend(validator_account.pub_key_hash.get_bits_le());
+        operator_account_data.extend(old_operator_balance_root_bits);
+
+        let root_from_operator = barik_allocate_merkle_root(
+            cs.namespace(|| "root from operator_account"),
+            &operator_account_data,
+            &validator_address_bits,
+            &validator_audit_path,
+            self.params,
+        )?;
+
+        // ensure that this operator leaf is correct for our tree state
+        cs.enforce(
+            || "root before applying fees is correct",
+            |lc| lc + root_from_operator.get_variable(),
+            |lc| lc + CS::one(),
+            |lc| lc + rolling_root.get_variable(),
+        );
+
+        //apply fees to operator balances
+        for i in 0..fees_len {
+            validator_balances[i] = allocate_sum(
+                cs.namespace(|| format!("validator balance number i {}", i)),
+                &validator_balances[i],
+                &fees[i],
+            )?;
+        }
+
+        // calculate operator's balance_tree root from all leafs
+        let new_operator_balance_root = barik_calculate_root_from_full_representation_fees(
+            cs.namespace(|| "calculate_root_from_full_representation_fees after"),
+            &validator_balances,
+            self.params,
+        )?;
+
+        let mut operator_account_data = vec![];
+        let mut new_operator_balance_root_bits = new_operator_balance_root
+            .into_bits_le(cs.namespace(|| "new_operator_balance_root_bits"))?;
+        new_operator_balance_root_bits.resize(
+            franklin_constants::FR_BIT_WIDTH_PADDED,
+            Boolean::constant(false),
+        );
+
+        operator_account_data.extend(validator_account.nonce.get_bits_le());
+        operator_account_data.extend(validator_account.pub_key_hash.get_bits_le());
+        operator_account_data.extend(new_operator_balance_root_bits);
+
+        let root_from_operator_after_fees = barik_allocate_merkle_root(
+            cs.namespace(|| "root from operator_account after fees"),
+            &operator_account_data,
+            &validator_address_bits,
+            &validator_audit_path,
+            self.params,
+        )?;
+
+        let final_root = CircuitElement::from_number_padded(
+            cs.namespace(|| "final_root"),
+            root_from_operator_after_fees.clone(),
+        )?;
+        {
+            // Now it's time to pack the initial SHA256 hash due to Ethereum BE encoding
+            // and start rolling the hash
+
+            let mut initial_hash_data: Vec<Boolean> = vec![];
+
+            let block_number =
+                CircuitElement::from_fe_padded(cs.namespace(|| "block_number"), || {
+                    self.block_number.grab()
+                })?;
+            initial_hash_data.extend(block_number.get_bits_be());
+
+            initial_hash_data.extend(validator_address_padded.get_bits_be());
+
+            assert_eq!(initial_hash_data.len(), 512);
+
+            let mut hash_block = sha256::sha256(
+                cs.namespace(|| "initial rolling sha256"),
+                &initial_hash_data,
+            )?;
+
+            let mut pack_bits = vec![];
+            pack_bits.extend(hash_block);
+            pack_bits.extend(old_root.get_bits_be());
+
+            let pointlol1=Instant::now();
+            hash_block = sha256::sha256(cs.namespace(|| "hash old_root"), &pack_bits)?;
+            unsafe {
+                sum_of_barik_timer += Instant::now().duration_since(pointlol1);
+            }
+
+            let mut pack_bits = vec![];
+            pack_bits.extend(hash_block);
+            pack_bits.extend(final_root.get_bits_be());
+
+            let pointlol2=Instant::now();
+            hash_block = sha256::sha256(cs.namespace(|| "hash with new_root"), &pack_bits)?;
+            unsafe {
+                sum_of_barik_timer += Instant::now().duration_since(pointlol2);
+            }
+
+            let mut pack_bits = vec![];
+            pack_bits.extend(hash_block);
+            pack_bits.extend(block_pub_data_bits.into_iter());
+
+            let pointlol3=Instant::now();
+            hash_block = sha256::sha256(cs.namespace(|| "final hash public"), &pack_bits)?;
+            unsafe {
+                sum_of_barik_timer += Instant::now().duration_since(pointlol3);
+            }
+
+            // // now pack and enforce equality to the input
+
+            hash_block.reverse();
+            hash_block.truncate(E::Fr::CAPACITY as usize);
+
+            let final_hash = pack_bits_to_element(cs.namespace(|| "final_hash"), &hash_block)?;
+            cs.enforce(
+                || "enforce external data hash equality",
+                |lc| lc + public_data_commitment.get_variable(),
+                |lc| lc + CS::one(),
+                |lc| lc + final_hash.get_variable(),
+            );
+        }
+        println!("time for circuits synthesize :: {:?}",Instant::now().duration_since(pointSTART));
+        unsafe {
+            println!("sum_of_barik_timer :: {:?}", sum_of_barik_timer);
         }
         Ok(())
     }
@@ -1724,16 +2132,25 @@ fn allocate_merkle_root<E: JubjubEngine, CS: ConstraintSystem<E>>(
     audit_path: &[AllocatedNum<E>],
     params: &E::Params,
 ) -> Result<AllocatedNum<E>, SynthesisError> {
+    use std::time::{Duration, Instant};
     // only first bits of index are considered valuable
     assert!(index.len() >= audit_path.len());
     let index = &index[0..audit_path.len()];
 
+    let pointkek1=Instant::now();
     let account_leaf_hash = pedersen_hash::pedersen_hash(
         cs.namespace(|| "account leaf content hash"),
         pedersen_hash::Personalization::NoteCommitment,
         &leaf_bits,
         params,
     )?;
+//    if (Instant::now().duration_since(pointkek1)>=Duration::from_millis(2)) {
+//        println!("time :: {:?}", Instant::now().duration_since(pointkek1));
+//    }
+    unsafe {
+        sum_of_barik_timer += Instant::now().duration_since(pointkek1);
+    }
+
     // This is an injective encoding, as cur is a
     // point in the prime order subgroup.
     let mut cur_hash = account_leaf_hash.get_x().clone();
@@ -1766,6 +2183,7 @@ fn allocate_merkle_root<E: JubjubEngine, CS: ConstraintSystem<E>>(
         preimage.extend(xr.into_bits_le(cs.namespace(|| "xr into bits"))?);
 
         // Compute the new subtree value
+        let pointkek2=Instant::now();
         cur_hash = pedersen_hash::pedersen_hash(
             cs.namespace(|| "computation of pedersen hash"),
             pedersen_hash::Personalization::MerkleTree(i),
@@ -1774,6 +2192,91 @@ fn allocate_merkle_root<E: JubjubEngine, CS: ConstraintSystem<E>>(
         )?
         .get_x()
         .clone(); // Injective encoding
+//        if (Instant::now().duration_since(pointkek2)>=Duration::from_millis(2)) {
+//            println!("time :: {:?}", Instant::now().duration_since(pointkek2));
+//        }
+        unsafe {
+            sum_of_barik_timer += Instant::now().duration_since(pointkek2);
+        }
+    }
+
+    Ok(cur_hash.clone())
+}
+
+fn barik_allocate_merkle_root<E: JubjubEngine, CS: ConstraintSystem<E>>(
+    mut cs: CS,
+    leaf_bits: &[Boolean],
+    index: &[Boolean],
+    audit_path: &[AllocatedNum<E>],
+    params: &E::Params,
+) -> Result<AllocatedNum<E>, SynthesisError> {
+    println!("i am in barik_allocate_merkle_root");
+    use std::time::{Duration, Instant};
+    // only first bits of index are considered valuable
+    assert!(index.len() >= audit_path.len());
+    let index = &index[0..audit_path.len()];
+
+    let pointkek1=Instant::now();
+    let account_leaf_hash = pedersen_hash::barik_pedersen_hash(
+        cs.namespace(|| "account leaf content hash"),
+        pedersen_hash::Personalization::NoteCommitment,
+        &leaf_bits,
+        params,
+    )?;
+//    if (Instant::now().duration_since(pointkek1)>=Duration::from_millis(2)) {
+//        println!("time :: {:?}", Instant::now().duration_since(pointkek1));
+//    }
+    unsafe {
+        sum_of_barik_timer += Instant::now().duration_since(pointkek1);
+    }
+
+    // This is an injective encoding, as cur is a
+    // point in the prime order subgroup.
+    let mut cur_hash = account_leaf_hash.get_x().clone();
+
+    // Ascend the merkle tree authentication path
+    for (i, direction_bit) in index.iter().enumerate() {
+        let cs = &mut cs.namespace(|| format!("from merkle tree hash {}", i));
+
+        // "direction_bit" determines if the current subtree
+        // is the "right" leaf at this depth of the tree.
+
+        // Witness the authentication path element adjacent
+        // at this depth.
+        let path_element = &audit_path[i];
+
+        // Swap the two if the current subtree is on the right
+        let (xl, xr) = AllocatedNum::conditionally_reverse(
+            cs.namespace(|| "conditional reversal of preimage"),
+            &cur_hash,
+            path_element,
+            &direction_bit,
+        )?;
+
+        // We don't need to be strict, because the function is
+        // collision-resistant. If the prover witnesses a congruency,
+        // they will be unable to find an authentication path in the
+        // tree with high probability.
+        let mut preimage = vec![];
+        preimage.extend(xl.into_bits_le(cs.namespace(|| "xl into bits"))?);
+        preimage.extend(xr.into_bits_le(cs.namespace(|| "xr into bits"))?);
+
+        // Compute the new subtree value
+        let pointkek2=Instant::now();
+        cur_hash = pedersen_hash::barik_pedersen_hash(
+            cs.namespace(|| "computation of pedersen hash"),
+            pedersen_hash::Personalization::MerkleTree(i),
+            &preimage,
+            params,
+        )?
+        .get_x()
+        .clone(); // Injective encoding
+//        if (Instant::now().duration_since(pointkek2)>=Duration::from_millis(2)) {
+//            println!("time :: {:?}", Instant::now().duration_since(pointkek2));
+//        }
+        unsafe {
+            sum_of_barik_timer += Instant::now().duration_since(pointkek2);
+        }
     }
 
     Ok(cur_hash.clone())
@@ -1868,18 +2371,26 @@ fn calculate_root_from_full_representation_fees<E: JubjubEngine, CS: ConstraintS
     fees: &[AllocatedNum<E>],
     params: &E::Params,
 ) -> Result<AllocatedNum<E>, SynthesisError> {
+    use std::time::{Duration, Instant};
     assert_eq!(fees.len(), 1 << franklin_constants::BALANCE_TREE_DEPTH);
     let mut fee_hashes = vec![];
     for (index, fee) in fees.iter().enumerate() {
         let cs = &mut cs.namespace(|| format!("fee hashing index number {}", index));
         let mut fee_bits = fee.into_bits_le(cs.namespace(|| "fee_bits"))?;
         fee_bits.truncate(franklin_constants::BALANCE_BIT_WIDTH);
+        let pointkek3=Instant::now();
         let temp = pedersen_hash::pedersen_hash(
             cs.namespace(|| "account leaf content hash"),
             pedersen_hash::Personalization::NoteCommitment,
             &fee_bits,
             params,
         )?;
+//        if (Instant::now().duration_since(pointkek3)>=Duration::from_millis(2)) {
+//            println!("time :: {:?}", Instant::now().duration_since(pointkek3));
+//        }
+        unsafe {
+            sum_of_barik_timer += Instant::now().duration_since(pointkek3);
+        }
         fee_hashes.push(temp.get_x().clone());
     }
     let mut hash_vec = fee_hashes;
@@ -1893,14 +2404,131 @@ fn calculate_root_from_full_representation_fees<E: JubjubEngine, CS: ConstraintS
             let mut preimage = vec![];
             preimage.extend(x[0].into_bits_le(cs.namespace(|| "x[0] into bits"))?);
             preimage.extend(x[1].into_bits_le(cs.namespace(|| "x[1] into bits"))?);
+            let pointkek4=Instant::now();
             let hash = pedersen_hash::pedersen_hash(
                 cs.namespace(|| "account leaf content hash"),
                 pedersen_hash::Personalization::MerkleTree(i),
                 &preimage,
                 params,
             )?;
+//            if (Instant::now().duration_since(pointkek4)>=Duration::from_millis(2)) {
+//                println!("time :: {:?}", Instant::now().duration_since(pointkek4));
+//            }
+            unsafe {
+                sum_of_barik_timer += Instant::now().duration_since(pointkek4);
+            }
             new_hashes.push(hash.get_x().clone());
         }
+        hash_vec = new_hashes;
+    }
+    assert_eq!(hash_vec.len(), 1);
+    Ok(hash_vec[0].clone())
+}
+
+//TODO: we can use fees: &[Expression<E>] if needed, though no real need
+fn barik_calculate_root_from_full_representation_fees<E: JubjubEngine, CS: ConstraintSystem<E>>(
+    mut cs: CS,
+    fees: &[AllocatedNum<E>],
+    params: &E::Params,
+) -> Result<AllocatedNum<E>, SynthesisError> {
+    println!("i am in barik_calculate_root_from_full_representation_fees");
+    use std::time::{Duration, Instant};
+    assert_eq!(fees.len(), 1 << franklin_constants::BALANCE_TREE_DEPTH);
+    let mut fee_hashes = vec![];
+    for (index, fee) in fees.iter().enumerate() {
+        let cs = &mut cs.namespace(|| format!("fee hashing index number {}", index));
+        let mut fee_bits = fee.into_bits_le(cs.namespace(|| "fee_bits"))?;
+        fee_bits.truncate(franklin_constants::BALANCE_BIT_WIDTH);
+        let pointkek3=Instant::now();
+        let temp = pedersen_hash::barik_pedersen_hash(
+            cs.namespace(|| "account leaf content hash"),
+            pedersen_hash::Personalization::NoteCommitment,
+            &fee_bits,
+            params,
+        )?;
+//        if (Instant::now().duration_since(pointkek3)>=Duration::from_millis(2)) {
+//            println!("time :: {:?}", Instant::now().duration_since(pointkek3));
+//        }
+        unsafe {
+            sum_of_barik_timer += Instant::now().duration_since(pointkek3);
+        }
+        fee_hashes.push(temp.get_x().clone());
+    }
+    let mut hash_vec = fee_hashes;
+
+    use futures::sync::oneshot;
+
+    use futures::*;
+    use std::sync::mpsc::channel;
+    use futures::Future;
+    use futures::future::lazy;
+    //use futures::executor::block_on;
+    use tokio::prelude::*;
+    use std::thread;
+    //use futures::future::join;
+    use futures::future::ok;
+    use std::error::Error;
+    use tokio::runtime::Runtime;
+
+
+    for i in 0..franklin_constants::BALANCE_TREE_DEPTH {
+        let cs = &mut cs.namespace(|| format!("merkle tree level index number {}", i));
+        let chunks = hash_vec.chunks(2);
+        let mut new_hashes = vec![];
+        let mut cur_barik_cnt=0;
+
+        let (Sen, Rec) = channel::<(usize,AllocatedNum<E>)>();
+        for (chunk_number, x) in chunks.enumerate() {
+            let Sen_clone=Sen.clone();
+            let cs = &mut cs.namespace(|| format!("chunk number {}", chunk_number));
+            let mut preimage = vec![];
+            preimage.extend(x[0].into_bits_le(cs.namespace(|| "x[0] into bits"))?);
+            preimage.extend(x[1].into_bits_le(cs.namespace(|| "x[1] into bits"))?);
+            let pointkek4=Instant::now();
+
+//            tokio::spawn(future::poll_fn(move || {
+//                let hash = pedersen_hash::barik_pedersen_hash(
+//                    cs.namespace(|| "account leaf content hash"),
+//                    pedersen_hash::Personalization::MerkleTree(i),
+//                    &preimage,
+//                    params,
+//                ).unwrap();
+//                Sen_clone.send((chunk_number,hash.get_x().clone())).unwrap();
+//
+//                Ok(Async::Ready(()))
+//            }));
+
+            let hash = pedersen_hash::barik_pedersen_hash(
+                cs.namespace(|| "account leaf content hash"),
+                pedersen_hash::Personalization::MerkleTree(i),
+                &preimage,
+                params,
+            ).unwrap();
+
+            new_hashes.push(hash.get_x().clone());
+//            if (Instant::now().duration_since(pointkek4)>=Duration::from_millis(2)) {
+//                println!("time :: {:?}", Instant::now().duration_since(pointkek4));
+//            }
+            unsafe {
+                sum_of_barik_timer += Instant::now().duration_since(pointkek4);
+            }
+            cur_barik_cnt+=1;
+        }
+        println!("can easy paralel :: {}",cur_barik_cnt);
+
+//        let mut keks: Vec<(usize,AllocatedNum<E>)> = vec![];
+//        for _ in 0..cur_barik_cnt{
+//            let received = Rec.recv().unwrap();
+//            keks.push(received);
+//        }
+//        for i in 0..cur_barik_cnt{
+//            for j in 0..cur_barik_cnt{
+//                if (keks[j].0==i){
+//                    new_hashes.push(keks[j].1);
+//                }
+//            }
+//        }
+
         hash_vec = new_hashes;
     }
     assert_eq!(hash_vec.len(), 1);

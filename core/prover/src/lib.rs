@@ -2,7 +2,7 @@
 extern crate log;
 
 use bellman::groth16::{
-    create_random_proof, prepare_verifying_key, verify_proof, Parameters, Proof,
+    barik_create_random_proof, create_random_proof, prepare_verifying_key, verify_proof, Parameters, Proof,
 };
 use circuit::circuit::FranklinCircuit;
 use circuit::operation::SignatureData;
@@ -257,6 +257,10 @@ impl BabyProver {
     }
 
     fn make_proving_attempt(&mut self) -> Result<(), String> {
+        use std::time::{Duration, Instant};
+
+        let pointSTART=Instant::now();
+
         let phasher = PedersenHasher::<Engine>::default();
         let params = &AltJubjubBn256::new();
 
@@ -563,7 +567,8 @@ impl BabyProver {
 
             let mut rng = OsRng::new().unwrap();
             info!("Prover has started to work");
-            let proof = create_random_proof(instance, &self.parameters, &mut rng);
+            println!("tag 1");
+            let proof = barik_create_random_proof(instance, &self.parameters, &mut rng);
             if proof.is_err() {
                 error!("proof can not be created: {}", proof.err().unwrap());
                 return Err("proof can not be created".to_owned());
@@ -608,6 +613,7 @@ impl BabyProver {
         } else {
             thread::sleep(Duration::from_secs(config::PROVER_CYCLE_WAIT));
         }
+        println!("time for all :: {:?}",Instant::now().duration_since(pointSTART));
         Ok(())
     }
     pub fn start_timer_interval(&self, rt: &Handle) {
