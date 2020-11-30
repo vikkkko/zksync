@@ -10,10 +10,10 @@ import * as path from 'path';
 
 (async () => {
     try {
-        if (!['test', 'localhost'].includes(process.env.ETH_NETWORK)) {
-            console.error('This deploy script is only for localhost-test network');
-            process.exit(1);
-        }
+        // if (!['test', 'localhost'].includes(process.env.ETH_NETWORK)) {
+        //     console.error('This deploy script is only for localhost-test network');
+        //     process.exit(1);
+        // }
 
         const testConfigPath = path.join(process.env.ZKSYNC_HOME, `etc/test_config/constant/eip1271.json`);
         const testConfig = JSON.parse(fs.readFileSync(testConfigPath, { encoding: 'utf-8' }));

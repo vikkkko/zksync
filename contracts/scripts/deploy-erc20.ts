@@ -19,7 +19,7 @@ async function deployToken(token: Token): Promise<Token> {
         wallet,
         readContractCode('TestnetERC20Token'),
         [token.name, token.symbol, token.decimals],
-        { gasLimit: 5000000 }
+        // { gasLimit: 5000000 }
     );
 
     await erc20.mint(wallet.address, parseEther('3000000000'));

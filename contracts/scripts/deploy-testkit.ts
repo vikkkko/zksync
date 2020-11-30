@@ -18,10 +18,10 @@ import { ArgumentParser } from 'argparse';
     const args = parser.parseArgs(process.argv.slice(2));
     process.env.GENESIS_ROOT = args.genesisRoot;
 
-    if (process.env.ETH_NETWORK !== 'test') {
-        console.error('This deploy script is only for localhost-test network');
-        process.exit(1);
-    }
+    // if (process.env.ETH_NETWORK !== 'test') {
+    //     console.error('This deploy script is only for localhost-test network');
+    //     process.exit(1);
+    // }
 
     const provider = new ethers.providers.JsonRpcProvider(process.env.WEB3_URL);
     provider.pollingInterval = 10;
@@ -37,7 +37,7 @@ import { ArgumentParser } from 'argparse';
         deployWallet,
         readContractCode('TestnetERC20Token'),
         ['Matter Labs Trial Token', 'MLTT', 18],
-        { gasLimit: 5000000 }
+        // { gasLimit: 5000000 }
     );
     console.log(`TEST_ERC20=${erc20.address}`);
     await (await governance.addToken(erc20.address)).wait();
