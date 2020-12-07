@@ -23,7 +23,7 @@ pub fn get_rpc_addr(network: Network) -> &'static str {
     match network {
         Network::Mainnet => "https://api.zksync.io/jsrpc",
         Network::Rinkeby => "https://rinkeby-api.zksync.io/jsrpc",
-        Network::Ropsten => "https://ropsten-api.zksync.io/jsrpc",
+        Network::Ropsten => "http://127.0.0.1:3030",
         Network::Localhost => "http://127.0.0.1:3030",
         Network::Unknown => panic!("Attempt to create a provider from an unknown network"),
     }
