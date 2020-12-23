@@ -12,16 +12,10 @@
     "name": "Basic Attention Token"
   },
   {
-    "name": "Matter Labs Test Token",
-    "symbol": "MLTT",
+    "name": "MINI Token",
+    "symbol": "MINI",
     "decimals": 18,
-    "address": "0xdb4a328Ad5490Cc8abE865f85F5692DB9245D05F"
-  },
-  {
-    "name": "mini token",
-    "symbol": "mini",
-    "decimals": 18,
-    "address": "0xbf004d22007118194f4578920f507AeE0EE11649"
+    "address": "0xE01b7aD70AE37d90eef750dE7E55d3ddb7081D91"
   },
   {
     "name": "USDT token",
