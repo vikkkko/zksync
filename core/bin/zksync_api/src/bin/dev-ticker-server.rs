@@ -70,8 +70,8 @@ async fn handle_coingecko_token_price_query(req: HttpRequest) -> Result<HttpResp
         Some("wrapped-bitcoin") => BigDecimal::from(9000),
         Some("basic-attention-token") => BigDecimal::from(0.2),
         Some("dai") => BigDecimal::from(1),
-        Some("mini") => BigDecimal::from(0.0001),
-        Some("usdt") => BigDecimal::from(1),
+        Some("mini-token") => BigDecimal::from(0.0001),
+        Some("usdt-token") => BigDecimal::from(1),
         _ => BigDecimal::from(0),
     };
     let random_multiplier = thread_rng().gen_range(0.9, 1.1);
