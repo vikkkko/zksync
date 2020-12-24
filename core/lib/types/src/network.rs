@@ -52,8 +52,8 @@ impl fmt::Display for Network {
             Self::Mainnet => write!(f, "mainnet"),
             Self::Rinkeby => write!(f, "rinkeby"),
             Self::Ropsten => write!(f, "ropsten"),
-            Self::RopstenD => write!(f,"ropstenD"),
-            Self::RopstenT => write!(f,"ropstenT"),
+            Self::RopstenD => write!(f, "ropstenD"),
+            Self::RopstenT => write!(f, "ropstenT"),
             Self::Localhost => write!(f, "localhost"),
             Self::Unknown => write!(f, "unknown"),
         }
