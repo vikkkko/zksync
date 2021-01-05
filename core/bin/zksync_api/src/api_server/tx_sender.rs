@@ -261,7 +261,7 @@ impl TxSender {
         // We allow fee to be 5% off the required fee
         let scaled_provided_fee_in_usd =
             provided_total_usd_fee.clone() * BigDecimal::from(105u32) / BigDecimal::from(100u32);
-        if required_total_usd_fee >= scaled_provided_fee_in_usd {
+        if required_total_usd_fee > scaled_provided_fee_in_usd {
             return Err(SubmitError::TxAdd(TxAddError::TxBatchFeeTooLow));
         }
 
