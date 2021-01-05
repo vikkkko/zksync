@@ -187,7 +187,7 @@ impl TxSender {
             // We allow fee to be 5% off the required fee
             let scaled_provided_fee =
                 provided_fee.clone() * BigUint::from(105u32) / BigUint::from(100u32);
-            if required_fee.total_fee >= scaled_provided_fee && should_enforce_fee {
+            if required_fee.total_fee > scaled_provided_fee && should_enforce_fee {
                 vlog::warn!(
                     "User provided fee is too low, required: {:?}, scaled: {}, token: {:?}",
                     required_fee.total_fee.to_string(),
