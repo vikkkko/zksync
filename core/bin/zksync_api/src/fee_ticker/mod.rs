@@ -337,15 +337,15 @@ impl<API: FeeTickerAPI, INFO: FeeTickerInfo> FeeTicker<API, INFO> {
             .get_last_quote(TokenLike::Id(token.id))
             .await?
             .usd_price
-            / BigUint::from(10u32).pow(u32::from(token.decimals))
-            * BigUint::from(10000u32);
+            / BigUint::from(10u32).pow(u32::from(token.decimals));
 
-        let zkp_fee =
-            (zkp_cost_chunk * op_chunks) * token_risk_factor.clone() / token_price_usd.clone();
-        let gas_fee = (wei_price_usd * gas_tx_amount.clone() * gas_price_wei.clone())
-            * token_risk_factor
-            / token_price_usd;
-
+        // let zkp_fee =
+        //     (zkp_cost_chunk * op_chunks) * token_risk_factor.clone() / token_price_usd.clone();
+        // let gas_fee = (wei_price_usd * gas_tx_amount.clone() * gas_price_wei.clone())
+        //     * token_risk_factor
+        //     / token_price_usd;
+        let zkp_fee = BigUint::from(0);
+        let gas_fee = BigUint::from(0);
         Ok(Fee::new(
             fee_type,
             zkp_fee,
