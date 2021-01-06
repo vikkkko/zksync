@@ -22,5 +22,11 @@
     "symbol": "USDT",
     "decimals": 18,
     "address": "0xfAaf18034a7e4eBC1cc78d0E66894E47A1c62242"
+  },
+  {
+    "name": "USDC token",
+    "symbol": "USDC",
+    "decimals": 6,
+    "address": "0xabe21da2aafbab0cfe6c05fe82608e0414c87a2b"
   }
 ]

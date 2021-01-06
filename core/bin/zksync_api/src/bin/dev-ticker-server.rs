@@ -27,6 +27,7 @@ async fn handle_coinmarketcap_token_price_query(
         "DAI" => BigDecimal::from(1),
         "MINI" => BigDecimal::from(0.0001),
         "USDT" => BigDecimal::from(1),
+        "USDC" => BigDecimal::from(1),
         _ => BigDecimal::from(0),
     };
     let random_multiplier = thread_rng().gen_range(0.9, 1.1);
@@ -56,8 +57,9 @@ async fn handle_coingecko_token_list(_req: HttpRequest) -> Result<HttpResponse> 
         {"id": "dai", "symbol":"dai", "name": "Dai"},
         {"id": "basic-attention-token", "symbol": "bat", "name": "Basic Attention Token"},
         {"id": "wrapped-bitcoin", "symbol": "wbtc", "name": "Wrapped Bitcoin"},
-        {"id": "mini-token", "symbol": "usdt", "name": "MINI Token"},
-        {"id": "usdt-token", "symbol": "mini", "name": "USDT Token"},
+        {"id": "mini-token", "symbol": "mini", "name": "MINI Token"},
+        {"id": "usdt-token", "symbol": "usdt", "name": "USDT Token"},
+        {"id": "usdc-token", "symbol": "usdc", "name": "USDC Token"},
     ]);
 
     Ok(HttpResponse::Ok().json(resp))
@@ -72,6 +74,7 @@ async fn handle_coingecko_token_price_query(req: HttpRequest) -> Result<HttpResp
         Some("dai") => BigDecimal::from(1),
         Some("mini-token") => BigDecimal::from(0.0001),
         Some("usdt-token") => BigDecimal::from(1),
+        Some("usdc-token") => BigDecimal::from(1),
         _ => BigDecimal::from(0),
     };
     let random_multiplier = thread_rng().gen_range(0.9, 1.1);
